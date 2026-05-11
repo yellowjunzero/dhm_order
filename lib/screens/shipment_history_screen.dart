@@ -18,10 +18,10 @@ final shipmentRecordsProvider = FutureProvider.autoDispose<List<ShipmentRecord>>
   return await GSheetService().fetchShipmentRecords();
 });
 
-final filterEntityProvider = StateProvider<String>((ref) => '전체');
-final filterCompanyProvider = StateProvider<String>((ref) => '전체');
-final filterMonthProvider = StateProvider<String>((ref) => '전체');
-final filterCategoryProvider = StateProvider<String>((ref) => '전체');
+final filterEntityProvider = StateProvider<String>((ref) => '매출구분');
+final filterCompanyProvider = StateProvider<String>((ref) => '업체명');
+final filterMonthProvider = StateProvider<String>((ref) => '마감월');
+final filterCategoryProvider = StateProvider<String>((ref) => '회계구분');
 
 class ShipmentHistoryScreen extends ConsumerWidget {
   const ShipmentHistoryScreen({super.key});
