@@ -77,6 +77,18 @@ class ShipmentRecord {
         ? '$year-$month-$day'
         : getVal(57).split(' ').first; // fallback: BF열(57)의 앞부분
 
+    String parseExcelDate(String value) {
+      final doubleVal = double.tryParse(value);
+      if (doubleVal == null) return value; // 숫자가 아니면 원본 그대로 반환
+      
+      final days = doubleVal.toInt();
+      final fraction = doubleVal - days;
+      final millis = (fraction * 24 * 60 * 60 * 1000).round();
+      
+      final date = DateTime(1899, 12, 30).add(Duration(days: days, milliseconds: millis));
+      
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    }
     return ShipmentRecord(
       entity:          getVal(0),
       company:         getVal(1),
@@ -101,7 +113,7 @@ class ShipmentRecord {
       salesManager:    getVal(53),    // BB: 영업담당자
       
       invoiceDate:     invoiceDateStr,
-      invoiceDateTime: getVal(57),    // BF: 송장 발행 일시
+      invoiceDateTime: parseExcelDate(getVal(57)),    // BF: 송장 발행 일시
       invoiceNo:       getVal(58),    // BG: 송장 NO.
     );
   }

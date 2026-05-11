@@ -18,14 +18,67 @@ final shipmentRecordsProvider = FutureProvider.autoDispose<List<ShipmentRecord>>
   return await GSheetService().fetchShipmentRecords();
 });
 
-final filterEntityProvider = StateProvider<String>((ref) => '매출구분');
-final filterCompanyProvider = StateProvider<String>((ref) => '업체명');
-final filterMonthProvider = StateProvider<String>((ref) => '마감월');
-final filterCategoryProvider = StateProvider<String>((ref) => '회계구분');
-
-class ShipmentHistoryScreen extends ConsumerWidget {
+class ShipmentHistoryScreen extends ConsumerStatefulWidget {
   const ShipmentHistoryScreen({super.key});
 
+  @override
+  ConsumerState<ShipmentHistoryScreen> createState() => _ShipmentHistoryScreenState();
+}
+
+class _ShipmentHistoryScreenState extends ConsumerState<ShipmentHistoryScreen> {
+  // 🎯 일반 텍스트 드롭다운 필터
+  String? _filterEntity;
+  String? _filterCompany;
+  String? _filterCategory;
+  String? _filterProductType;
+  String? _filterMaterial;
+  String? _filterShape;
+  String? _filterClosingMonth;
+  
+  // 🎯 일반 텍스트 입력 필터
+  String _filterInvoiceDate = '';
+  String _filterInvoiceNo = '';
+
+  // 🎯 숫자 특수 필터 (연산자, 값1, 값2)
+  String _thickOp = '일치'; String _thickVal1 = ''; String _thickVal2 = '';
+  String _widthOp = '일치'; String _widthVal1 = ''; String _widthVal2 = '';
+  String _lengthOp = '일치'; String _lengthVal1 = ''; String _lengthVal2 = '';
+  String _qtyOp = '일치'; String _qtyVal1 = ''; String _qtyVal2 = '';
+  String _weightOp = '일치'; String _weightVal1 = ''; String _weightVal2 = '';
+
+  // 🔄 필터 초기화 함수
+  void _resetFilters() {
+    setState(() {
+      _filterEntity = null; _filterCompany = null; _filterCategory = null;
+      _filterProductType = null; _filterMaterial = null; _filterShape = null; _filterClosingMonth = null;
+      _filterInvoiceDate = ''; _filterInvoiceNo = '';
+      
+      _thickOp = '일치'; _thickVal1 = ''; _thickVal2 = '';
+      _widthOp = '일치'; _widthVal1 = ''; _widthVal2 = '';
+      _lengthOp = '일치'; _lengthVal1 = ''; _lengthVal2 = '';
+      _qtyOp = '일치'; _qtyVal1 = ''; _qtyVal2 = '';
+      _weightOp = '일치'; _weightVal1 = ''; _weightVal2 = '';
+    });
+  }
+
+  // 🔢 숫자 조건 비교 로직
+  bool _matchNumeric(double? recordVal, String op, String val1, String val2) {
+    if (val1.isEmpty) return true; // 필터 입력 안함
+    double? target1 = double.tryParse(val1);
+    if (target1 == null) return true;
+
+    if (op == '일치') return recordVal == target1;
+    if (op == '이상') return recordVal != null && recordVal >= target1;
+    if (op == '이하') return recordVal != null && recordVal <= target1;
+    if (op == '범위') {
+      double? target2 = double.tryParse(val2);
+      if (target2 == null) return recordVal != null && recordVal >= target1;
+      return recordVal != null && recordVal >= target1 && recordVal <= target2;
+    }
+    return true;
+  }
+
+  // 엑셀 내보내기
   Future<void> _exportToExcel(BuildContext context, List<ShipmentRecord> records) async {
     try {
       final excel = Excel.createExcel();
@@ -82,6 +135,7 @@ class ShipmentHistoryScreen extends ConsumerWidget {
     }
   }
 
+  // PDF 내보내기
   Future<void> _exportToPdf(BuildContext context, List<ShipmentRecord> records) async {
     final font = await PdfGoogleFonts.nanumGothicRegular();
     final fontBold = await PdfGoogleFonts.nanumGothicBold();
@@ -178,22 +232,9 @@ class ShipmentHistoryScreen extends ConsumerWidget {
     }
   }
 
-  void _showDetailSheet(BuildContext context, ShipmentRecord record) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => _ShipmentDetailSheet(record: record),
-    );
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final recordsAsync = ref.watch(shipmentRecordsProvider);
-    final selectedEntity = ref.watch(filterEntityProvider);
-    final selectedCompany = ref.watch(filterCompanyProvider);
-    final selectedMonth = ref.watch(filterMonthProvider);
-    final selectedCategory = ref.watch(filterCategoryProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
@@ -202,27 +243,13 @@ class ShipmentHistoryScreen extends ConsumerWidget {
         backgroundColor: Colors.white, elevation: 0,
         actions: [
           recordsAsync.whenOrNull(
-            data: (allRecords) {
-              final filteredForExport = allRecords.where((r) {
-                bool passEntity = selectedEntity == '전체' || r.entity == selectedEntity;
-                bool passCompany = selectedCompany == '전체' || r.company == selectedCompany;
-                bool passCategory = selectedCategory == '전체' || r.salesCategory == selectedCategory;
-                bool passMonth = selectedMonth == '전체';
-                if (!passMonth) {
-                  final parts = r.invoiceDate.split('-');
-                  if (parts.length >= 2) passMonth = '${parts[0]}년 ${parts[1]}월' == selectedMonth;
-                }
-                return passEntity && passCompany && passCategory && passMonth;
-              }).toList();
-
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(icon: const Icon(Icons.table_chart, color: Colors.green), tooltip: '엑셀로 내보내기', onPressed: () => _exportToExcel(context, filteredForExport)),
-                  IconButton(icon: const Icon(Icons.picture_as_pdf, color: Colors.red), tooltip: 'PDF로 내보내기', onPressed: () => _exportToPdf(context, filteredForExport)),
-                ],
-              );
-            },
+            data: (allRecords) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(icon: const Icon(Icons.table_chart, color: Colors.green), tooltip: '엑셀로 내보내기', onPressed: () => _exportToExcel(context, _getFilteredRecords(allRecords))),
+                IconButton(icon: const Icon(Icons.picture_as_pdf, color: Colors.red), tooltip: 'PDF로 내보내기', onPressed: () => _exportToPdf(context, _getFilteredRecords(allRecords))),
+              ],
+            ),
           ) ?? const SizedBox.shrink(),
           IconButton(icon: const Icon(Icons.refresh, color: Colors.black), onPressed: () => ref.refresh(shipmentRecordsProvider)),
         ],
@@ -231,25 +258,7 @@ class ShipmentHistoryScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, s) => Center(child: Text('오류 발생: $e')),
         data: (allRecords) {
-          
-          final companies = ['전체', ...allRecords.map((e) => e.company).toSet().toList()..sort()];
-          final months = ['전체', ...allRecords.map((e) {
-            final parts = e.invoiceDate.split('-');
-            return parts.length >= 2 ? '${parts[0]}년 ${parts[1]}월' : '';
-          }).where((e) => e.isNotEmpty).toSet().toList()..sort((a, b) => b.compareTo(a))];
-          final categories = ['전체', ...allRecords.map((e) => e.salesCategory).where((e) => e.isNotEmpty).toSet().toList()..sort()];
-
-          final filteredRecords = allRecords.where((r) {
-            bool passEntity = selectedEntity == '전체' || r.entity == selectedEntity;
-            bool passCompany = selectedCompany == '전체' || r.company == selectedCompany;
-            bool passCategory = selectedCategory == '전체' || r.salesCategory == selectedCategory;
-            bool passMonth = selectedMonth == '전체';
-            if (!passMonth) {
-              final parts = r.invoiceDate.split('-');
-              if (parts.length >= 2) passMonth = '${parts[0]}년 ${parts[1]}월' == selectedMonth;
-            }
-            return passEntity && passCompany && passCategory && passMonth;
-          }).toList();
+          final filteredRecords = _getFilteredRecords(allRecords);
 
           double totalValue = 0.0;
           double totalWeight = 0.0;
@@ -281,7 +290,7 @@ class ShipmentHistoryScreen extends ConsumerWidget {
                 ),
               ),
 
-              // 🎯 필터 영역
+              // 🎯 통합 필터 영역 (가로 스크롤)
               Container(
                 color: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -289,13 +298,33 @@ class ShipmentHistoryScreen extends ConsumerWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildDropdown('회계명', selectedEntity, ['전체', 'DHM', 'DHT'], (v) => ref.read(filterEntityProvider.notifier).state = v!),
-                      const SizedBox(width: 12),
-                      _buildDropdown('발행월', selectedMonth, months, (v) => ref.read(filterMonthProvider.notifier).state = v!),
-                      const SizedBox(width: 12),
-                      _buildDropdown('업체명', selectedCompany, companies, (v) => ref.read(filterCompanyProvider.notifier).state = v!),
-                      const SizedBox(width: 12),
-                      _buildDropdown('매출구분', selectedCategory, categories, (v) => ref.read(filterCategoryProvider.notifier).state = v!),
+                      // 초기화 버튼
+                      IconButton(
+                        onPressed: _resetFilters, 
+                        icon: const Icon(Icons.filter_alt_off), 
+                        color: Colors.red, tooltip: '필터 초기화'
+                      ),
+                      Container(width: 1, height: 30, color: Colors.grey.shade300, margin: const EdgeInsets.only(right: 12)),
+                      
+                      // 1. 일반 드롭다운 필터들
+                      _buildDropdownFilter('회계명', _filterEntity, ['DHM', 'DHT'], (v) => setState(() => _filterEntity = v)),
+                      _buildDropdownFilter('마감월', _filterClosingMonth, _getMonths(allRecords), (v) => setState(() => _filterClosingMonth = v)),
+                      _buildDropdownFilter('업체명', _filterCompany, _getCompanies(allRecords), (v) => setState(() => _filterCompany = v)),
+                      _buildDropdownFilter('매출구분', _filterCategory, _getCategories(allRecords), (v) => setState(() => _filterCategory = v)),
+                      _buildDropdownFilter('제품구분', _filterProductType, _getDistinct(allRecords, (r) => r.productType), (v) => setState(() => _filterProductType = v)),
+                      _buildDropdownFilter('재질', _filterMaterial, _getDistinct(allRecords, (r) => r.material), (v) => setState(() => _filterMaterial = v)),
+                      _buildDropdownFilter('제품형태', _filterShape, _getDistinct(allRecords, (r) => r.temper), (v) => setState(() => _filterShape = v)),
+                      
+                      // 2. 텍스트 검색 필터
+                      _buildTextFilter('송장발행일', _filterInvoiceDate, (v) => setState(() => _filterInvoiceDate = v)),
+                      _buildTextFilter('송장번호', _filterInvoiceNo, (v) => setState(() => _filterInvoiceNo = v)),
+
+                      // 3. 숫자 특수 필터들
+                      _buildNumericFilter('두께', _thickOp, (v) => setState(() => _thickOp = v!), (v) => _thickVal1 = v, (v) => _thickVal2 = v),
+                      _buildNumericFilter('폭', _widthOp, (v) => setState(() => _widthOp = v!), (v) => _widthVal1 = v, (v) => _widthVal2 = v),
+                      _buildNumericFilter('길이', _lengthOp, (v) => setState(() => _lengthOp = v!), (v) => _lengthVal1 = v, (v) => _lengthVal2 = v),
+                      _buildNumericFilter('수량', _qtyOp, (v) => setState(() => _qtyOp = v!), (v) => _qtyVal1 = v, (v) => _qtyVal2 = v),
+                      _buildNumericFilter('중량', _weightOp, (v) => setState(() => _weightOp = v!), (v) => _weightVal1 = v, (v) => _weightVal2 = v),
                     ],
                   ),
                 ),
@@ -347,7 +376,6 @@ class ShipmentHistoryScreen extends ConsumerWidget {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    // 🚀 리스트에서는 짧게, 상세에서는 초단위까지 보여줌
                                     Text('출고일: ${record.invoiceDate}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                                     if (record.salesManager.isNotEmpty) ...[
                                       const SizedBox(width: 12),
@@ -373,6 +401,60 @@ class ShipmentHistoryScreen extends ConsumerWidget {
     );
   }
 
+  // ── 데이터 필터링 로직 ──────────────────────────────
+  List<ShipmentRecord> _getFilteredRecords(List<ShipmentRecord> allRecords) {
+    return allRecords.where((r) {
+      // 1. 기본 텍스트 드롭다운 매칭
+      if (_filterEntity != null && r.entity != _filterEntity) return false;
+      if (_filterCompany != null && r.company != _filterCompany) return false;
+      if (_filterCategory != null && r.salesCategory != _filterCategory) return false;
+      if (_filterProductType != null && r.productType != _filterProductType) return false;
+      if (_filterMaterial != null && r.material != _filterMaterial) return false;
+      if (_filterShape != null && r.temper != _filterShape) return false;
+      
+      // 2. 마감월 매칭
+      if (_filterClosingMonth != null) {
+        final parts = r.invoiceDate.split('-');
+        final monthStr = parts.length >= 2 ? '${parts[0]}년 ${parts[1]}월' : '';
+        if (monthStr != _filterClosingMonth) return false;
+      }
+
+      // 3. 텍스트 검색 매칭
+      if (_filterInvoiceDate.isNotEmpty && !r.invoiceDate.contains(_filterInvoiceDate)) return false;
+      if (_filterInvoiceNo.isNotEmpty && !r.invoiceNo.contains(_filterInvoiceNo)) return false;
+
+      // 4. 숫자 매칭 (수량, 중량)
+      if (!_matchNumeric(r.qty, _qtyOp, _qtyVal1, _qtyVal2)) return false;
+      if (!_matchNumeric(r.weight, _weightOp, _weightVal1, _weightVal2)) return false;
+
+      // 5. 규격 파싱 및 매칭 (두께, 폭, 길이)
+      double? thick, width, length;
+      final specStr = r.spec.toUpperCase().replaceAll('T', '').replaceAll(' ', '');
+      final specParts = specStr.split(RegExp(r'[*X×]')); // *, X, × 기준으로 분리
+      if (specParts.isNotEmpty) thick = double.tryParse(specParts[0]);
+      if (specParts.length > 1) width = double.tryParse(specParts[1]);
+      if (specParts.length > 2) length = double.tryParse(specParts[2]);
+
+      if (!_matchNumeric(thick, _thickOp, _thickVal1, _thickVal2)) return false;
+      if (!_matchNumeric(width, _widthOp, _widthVal1, _widthVal2)) return false;
+      if (!_matchNumeric(length, _lengthOp, _lengthVal1, _lengthVal2)) return false;
+
+      return true; // 모든 조건을 통과함
+    }).toList();
+  }
+
+  // ── 필터링용 유틸리티 ──────────────────────────────
+  List<String> _getCompanies(List<ShipmentRecord> records) => records.map((e) => e.company).toSet().toList()..sort();
+  List<String> _getCategories(List<ShipmentRecord> records) => records.map((e) => e.salesCategory).where((e) => e.isNotEmpty).toSet().toList()..sort();
+  List<String> _getDistinct(List<ShipmentRecord> records, String Function(ShipmentRecord) selector) => records.map(selector).where((e) => e.isNotEmpty).toSet().toList()..sort();
+  List<String> _getMonths(List<ShipmentRecord> records) {
+    return records.map((e) {
+      final parts = e.invoiceDate.split('-');
+      return parts.length >= 2 ? '${parts[0]}년 ${parts[1]}월' : '';
+    }).where((e) => e.isNotEmpty).toSet().toList()..sort((a, b) => b.compareTo(a));
+  }
+
+  // ── UI 빌더 유틸리티 ──────────────────────────────
   Widget _buildSummaryItem(String title, String value) {
     return Column(
       children: [
@@ -383,28 +465,100 @@ class ShipmentHistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDropdown(String label, String value, List<String> items, Function(String?) onChanged) {
+  Widget _buildDropdownFilter(String hint, String? value, List<String> items, Function(String?) onChanged) {
     return Container(
-      width: 150,
+      margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          isExpanded: true,
-          value: items.contains(value) ? value : null,
-          hint: Text(label),
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+          value: value,
+          hint: Text(hint, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+          items: [
+            DropdownMenuItem(value: null, child: Text(hint, style: const TextStyle(color: Colors.grey))),
+            ...items.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))),
+          ],
           onChanged: onChanged,
         ),
       ),
     );
   }
+
+  Widget _buildTextFilter(String hint, String value, Function(String) onChanged) {
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(right: 8),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(fontSize: 13, color: Colors.black54),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+        ),
+        style: const TextStyle(fontSize: 13),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildNumericFilter(String label, String op, Function(String?) onOpChanged, Function(String) onVal1Changed, Function(String) onVal2Changed) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(border: Border.all(color: Colors.blue.shade200), borderRadius: BorderRadius.circular(8), color: Colors.blue.shade50.withOpacity(0.3)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+          const SizedBox(width: 6),
+          DropdownButton<String>(
+            value: op,
+            isDense: true,
+            underline: const SizedBox(),
+            items: ['일치', '이상', '이하', '범위'].map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 13)))).toList(),
+            onChanged: onOpChanged,
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: 50,
+            child: TextField(
+              keyboardType: TextInputType.number,
+              style: const TextStyle(fontSize: 13),
+              decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.all(6), border: OutlineInputBorder()),
+              onChanged: onVal1Changed,
+            ),
+          ),
+          if (op == '범위') ...[
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('~')),
+            SizedBox(
+              width: 50,
+              child: TextField(
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 13),
+                decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.all(6), border: OutlineInputBorder()),
+                onChanged: onVal2Changed,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showDetailSheet(BuildContext context, ShipmentRecord record) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ShipmentDetailSheet(record: record),
+    );
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
-// 💡 상세 보기 BottomSheet (로딩 없이 즉각 렌더링)
+// 💡 상세 보기 BottomSheet
 // ════════════════════════════════════════════════════════════════
-
 class _ShipmentDetailSheet extends StatelessWidget {
   final ShipmentRecord record;
   const _ShipmentDetailSheet({required this.record});
@@ -413,17 +567,17 @@ class _ShipmentDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = record;
     final fmt = NumberFormat('#,###');
+    
+    String closingMonth = '';
+    if (r.invoiceDate.contains('-')) {
+      final parts = r.invoiceDate.split('-');
+      if (parts.length >= 2) closingMonth = '${parts[0]}년 ${parts[1]}월';
+    }
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       child: DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
+        initialChildSize: 0.7, minChildSize: 0.5, maxChildSize: 0.95, expand: false,
         builder: (_, scrollController) {
           return SingleChildScrollView(
             controller: scrollController,
@@ -431,42 +585,20 @@ class _ShipmentDetailSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 드래그 핸들
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
-                  ),
-                ),
-                // 제목 헤더
+                Center(child: Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
                 Row(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: r.entity == 'DHM' ? const Color(0xFF001F3F) : Colors.deepOrange,
-                      child: Text(r.entity, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                    ),
+                    CircleAvatar(backgroundColor: r.entity == 'DHM' ? const Color(0xFF001F3F) : Colors.deepOrange, child: Text(r.entity, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white))),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(r.company, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text(r.salesCategory, style: TextStyle(fontSize: 13, color: Colors.blue.shade700)),
-                        ],
-                      ),
-                    ),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(r.company, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)), Text(r.salesCategory, style: TextStyle(fontSize: 13, color: Colors.blue.shade700))])),
                   ],
                 ),
                 const Divider(height: 28),
-                
-                // 1. 송장 및 출고일시
                 _detailRow('송장번호', r.invoiceNo, isHighlight: true),
-                _detailRow('출고일시', r.invoiceDateTime, valueColor: Colors.black87), // 🚀 초 단위까지 원본 표시
+                _detailRow('마감월', closingMonth, valueColor: Colors.blue.shade700),
+                _detailRow('출고일시', r.invoiceDateTime, valueColor: Colors.black87),
                 _detailRow('영업담당자', r.salesManager),
                 const SizedBox(height: 12),
-
-                // 2. 수량/잔량 정보
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green.shade200)),
@@ -490,8 +622,6 @@ class _ShipmentDetailSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // 3. 제품 정보
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
@@ -508,51 +638,30 @@ class _ShipmentDetailSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // 4. 비고 & 특기사항
-                if (r.remark.isNotEmpty || r.internalNote.isNotEmpty) ...[
+                if (r.remark.isNotEmpty || r.internalNote.isNotEmpty || r.workerNote.isNotEmpty) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.purple.shade100)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('발주 메모', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.purple.shade700)),
-                        const SizedBox(height: 8),
-                        if (r.remark.isNotEmpty) Text('📝 비고: ${r.remark}', style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                        if (r.internalNote.isNotEmpty) Text('⚠️ 특기사항: ${r.internalNote}', style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // 5. 작업자 특이사항
-                if (r.workerNote.isNotEmpty) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber.shade400, width: 1.5)),
+                    decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber.shade300, width: 1)),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
-                            const SizedBox(width: 8),
-                            Text('작업자 특이사항 (생산현장)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange.shade900)),
+                            const Icon(Icons.note_alt_outlined, color: Colors.orange, size: 18),
+                            const SizedBox(width: 6),
+                            Text('메모 및 특이사항', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange.shade900)),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(r.workerNote, style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        if (r.remark.isNotEmpty) Text('📝 비고: ${r.remark}', style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                        if (r.internalNote.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4.0), child: Text('⚠️ 특기사항: ${r.internalNote}', style: const TextStyle(fontSize: 13, color: Colors.black87))),
+                        if (r.workerNote.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8.0), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)), child: Text('👷 작업현장 메모:\n${r.workerNote}', style: const TextStyle(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.bold)))),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
-
-                // 6. 단가, 공급가액 및 마진율 (이제 저장된 원가로 즉시 표시)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.shade100)),
@@ -566,14 +675,8 @@ class _ShipmentDetailSheet extends StatelessWidget {
                       const Divider(height: 16),
                       _detailRow('공급가액', '₩${fmt.format(r.supplyValue)}', isHighlight: true, valueFontSize: 20),
                       const SizedBox(height: 12),
-                      
-                      // 🚀 마진율 즉시 렌더링
                       if (r.recordedCost <= 0)
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4)),
-                          child: const Text('출고 당시 원가 데이터가 없어 마진율이 기록되지 않았습니다.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        )
+                        Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(4)), child: const Text('출고 당시 원가 데이터가 없어 마진율이 기록되지 않았습니다.', style: TextStyle(fontSize: 12, color: Colors.grey)))
                       else
                         _buildMarginBadge(r.recordedCost, r.marginRate, r.marginStatus),
                     ],
@@ -587,61 +690,32 @@ class _ShipmentDetailSheet extends StatelessWidget {
     );
   }
 
-  // ── 공용 위젯 ──────────────────────────
-
   Widget _detailRow(String label, String value, {bool isHighlight = false, double valueFontSize = 14, Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 90,
-            child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: valueFontSize,
-                fontWeight: isHighlight ? FontWeight.bold : FontWeight.w500,
-                color: valueColor ?? (isHighlight ? const Color(0xFF001F3F) : Colors.black87),
-              ),
-            ),
-          ),
+          SizedBox(width: 90, child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade600))),
+          Expanded(child: Text(value, style: TextStyle(fontSize: valueFontSize, fontWeight: isHighlight ? FontWeight.bold : FontWeight.w500, color: valueColor ?? (isHighlight ? const Color(0xFF001F3F) : Colors.black87)))),
         ],
       ),
     );
   }
 
   Widget _buildMarginBadge(double cost, double rate, String status) {
-    Color rateColor;
-    if (status == '양호') rateColor = Colors.green.shade700;
-    else if (status == '주의') rateColor = Colors.orange.shade700;
-    else rateColor = Colors.red.shade700;
-
+    Color rateColor = status == '양호' ? Colors.green.shade700 : (status == '주의' ? Colors.orange.shade700 : Colors.red.shade700);
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: rateColor.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: rateColor.withOpacity(0.3)),
-      ),
+      decoration: BoxDecoration(color: rateColor.withOpacity(0.06), borderRadius: BorderRadius.circular(8), border: Border.all(color: rateColor.withOpacity(0.3))),
       child: Row(
         children: [
-          Expanded(
-            child: Text('기록된 원가: ${NumberFormat('#,###').format(cost)} 원',
-                style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
-          ),
+          Expanded(child: Text('기록된 원가: ${NumberFormat('#,###').format(cost)} 원', style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.bold))),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text('${rate.toStringAsFixed(1)}%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: rateColor)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: rateColor, borderRadius: BorderRadius.circular(4)),
-                child: Text(status.isEmpty ? '알수없음' : status, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: rateColor, borderRadius: BorderRadius.circular(4)), child: Text(status.isEmpty ? '알수없음' : status, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
             ],
           ),
         ],
