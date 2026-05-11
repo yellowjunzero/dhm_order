@@ -364,5 +364,36 @@ class OrderItemFormScreen extends ConsumerWidget {
   Widget _buildMarginBanner(MarginFeedback fb) {
     return Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: fb.levelColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Text('마진율: ${fb.currentPercent.toStringAsFixed(1)}%  ', style: const TextStyle(fontWeight: FontWeight.bold)), Text(fb.levelLabel, style: TextStyle(color: fb.levelColor, fontWeight: FontWeight.bold, fontSize: 16))]));
   }
-  Widget _buildSubmitButton(BuildContext context, WidgetRef ref, OrderItemFormState state) => SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: () { ref.read(orderProvider.notifier).addItem(state); Navigator.pop(context); }, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF001F3F), foregroundColor: Colors.white), child: const Text('품목 추가 완료', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))));
+Widget _buildSubmitButton(BuildContext context, WidgetRef ref, OrderItemFormState state) => 
+  SizedBox(
+    width: double.infinity, 
+    height: 50, 
+    child: ElevatedButton(
+      onPressed: () { 
+        // 🚀 [마감월 가로채기 로직]
+        String finalMonth = state.closingMonth; // 현재 선택된 값 (예: '당월')
+        
+        if (finalMonth == '당월') {
+          finalMonth = '${DateTime.now().month}월';
+        } else if (finalMonth == '익월') {
+          int nextMonth = DateTime.now().month + 1;
+          finalMonth = '${nextMonth > 12 ? 1 : nextMonth}월';
+        }
+
+        // 💡 중요: copyWith를 사용하여 '마감월'만 바꾼 새로운 데이터를 만듭니다.
+        // 이렇게 해야 다른 입력값(단가, 규격 등)이 사라지지 않고 안전하게 저장됩니다.
+        final updatedState = state.copyWith(closingMonth: finalMonth);
+        
+        // 가로챈 월이 반영된 updatedState를 저장소에 보냅니다.
+        ref.read(orderProvider.notifier).addItem(updatedState); 
+        
+        Navigator.pop(context); 
+      }, 
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF001F3F), 
+        foregroundColor: Colors.white
+      ), 
+      child: const Text('품목 추가 완료', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
+    )
+  );
 }

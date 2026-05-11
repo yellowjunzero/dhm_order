@@ -415,6 +415,14 @@ class _EditOrderDialogState extends State<EditOrderDialog> {
   }
 
   Future<void> _save() async {
+    // 🚀 [수정 로직 추가] 
+    String finalClosingMonth = _closingMonth.text;
+    if (finalClosingMonth == '당월') {
+      finalClosingMonth = '${DateTime.now().month}월';
+    } else if (finalClosingMonth == '익월') {
+      int nextMonth = DateTime.now().month + 1;
+      finalClosingMonth = '${nextMonth > 12 ? 1 : nextMonth}월';
+    }
     setState(() => _isLoading = true);
     try {
       // 발주_RAW 업데이트 (1-based 열 인덱스)
@@ -442,7 +450,7 @@ class _EditOrderDialogState extends State<EditOrderDialog> {
           GSheetService.colRemark         : _remark.text,       // AA
           GSheetService.colInternalNote   : _internal.text,     // AB
           GSheetService.colDeliveryMethod : _deliveryMethod,    // AC
-          GSheetService.colClosingMonth   : _closingMonth.text, // AE
+          GSheetService.colClosingMonth   : finalClosingMonth, // AE 👈 바꿔치기한 변수 사용
         },
       );
       */
