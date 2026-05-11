@@ -18,6 +18,7 @@ class OrderSummary {
   
   final String businessEntity; 
   final String salesCategory;  
+  final String salesManager;
   final String origin;         
   final String unitPrice;      
   final String unit;           
@@ -56,7 +57,7 @@ class OrderSummary {
     required this.internalNote, required this.deliveryMethod,
     required this.weight, required this.specificGravity, 
     required this.workStatus, required this.workerName, required this.workNote,
-    required this.businessEntity, required this.salesCategory, required this.origin,
+    required this.businessEntity, required this.salesCategory, required this.salesManager,required this.origin,
     required this.unitPrice, required this.unit,
     required this.thickness, required this.bDimension, required this.width, required this.length,
     required this.shippingSource, required this.deliveryPoint, required this.deliveryDestInfo,
@@ -97,7 +98,7 @@ class OrderSummary {
       workStatus: getVal(48).isEmpty ? '작업대기' : getVal(48), 
       workerName: getVal(49), workNote: getVal(50), 
       
-      businessEntity: getVal(4), salesCategory: getVal(6), origin: getVal(10), unitPrice: getVal(23), unit: getVal(24),            
+      businessEntity: getVal(4), salesCategory: getVal(6), salesManager: getVal(31), origin: getVal(10), unitPrice: getVal(23), unit: getVal(24),            
       thickness: t, bDimension: b, width: w, length: l,
       shippingSource: getVal(7), deliveryPoint: getVal(8), deliveryDestInfo: getVal(29), 
       productCategory: getVal(11), material: getVal(12), productType: getVal(13), temper: getVal(14), 

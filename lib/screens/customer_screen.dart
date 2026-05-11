@@ -94,6 +94,7 @@ class _CustomerScreenState extends State<CustomerScreen> {
     });
   }
 
+  // 🚀 [핵심 수정] 신규 등록 vs 기존 업체 수정을 분기 처리
   Future<void> _saveCustomer() async {
     if (_nameCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('거래처명(A열)은 필수 입력 사항입니다!')));
@@ -117,13 +118,55 @@ class _CustomerScreenState extends State<CustomerScreen> {
     data[24] = _bankCtrl.text;      data[25] = _homeCtrl.text;
 
     try {
-      await _gsheetService.addCustomer(data);
-      setState(() => _isAddingNew = false);
+      if (_selectedCustomer != null) {
+        // ✅ 기존 업체 수정 모드: 원래 거래처명을 기준으로 해당 행을 업데이트
+        await _gsheetService.updateCustomer(_selectedCustomer!.companyName, data);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 업체 정보가 성공적으로 수정되었습니다!')));
+      } else {
+        // ✅ 신규 등록 모드: 맨 아래 행에 추가
+        await _gsheetService.addCustomer(data);
+        setState(() => _isAddingNew = false);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 시트에 성공적으로 등록되었습니다!')));
+      }
       _clearForm();
       _loadCustomers();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ 시트에 성공적으로 등록되었습니다!')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('에러 발생: $e')));
+    }
+  }
+
+  // 🚀 [신규] 삭제 확인 다이얼로그 후 deleteCustomer 호출
+  Future<void> _deleteCustomer() async {
+    if (_selectedCustomer == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('업체 삭제'),
+        content: Text('"${_selectedCustomer!.companyName}" 업체를 정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _gsheetService.deleteCustomer(_selectedCustomer!.companyName);
+      _clearForm();
+      _loadCustomers();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🗑️ 업체가 삭제되었습니다.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('삭제 중 에러 발생: $e')));
     }
   }
 
@@ -141,7 +184,12 @@ class _CustomerScreenState extends State<CustomerScreen> {
   }
 
   // 상세 폼 알맹이 (모바일/PC 공용)
-  Widget _buildFormContent(bool isMobile) {
+  // isNewMode: true이면 신규 등록 폼 (삭제 버튼 미표시), false이면 기존 업체 편집 가능
+  Widget _buildFormContent(bool isMobile, {bool isNewMode = false}) {
+    // 저장 버튼 라벨: 신규 등록 폼이거나 selectedCustomer가 없으면 '신규 등록', 아니면 '수정 저장'
+    final bool isEditing = !isNewMode && _selectedCustomer != null;
+    final String saveLabel = isEditing ? '수정 내용 저장하기' : '구글 시트에 신규 등록하기';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -167,17 +215,35 @@ class _CustomerScreenState extends State<CustomerScreen> {
         if (!isMobile) const SizedBox(height: 12),
         _buildTextField('비고 (T)', _memoCtrl, maxLines: 3),
         const SizedBox(height: 24),
-        Center(
-          child: ElevatedButton.icon(
-            onPressed: _saveCustomer,
-            icon: const Icon(Icons.cloud_upload),
-            label: const Text('구글 시트에 신규 등록하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF001F3F),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+        // 🚀 [핵심 수정] 저장 버튼 + 삭제 버튼을 가로로 배치
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton.icon(
+              onPressed: _saveCustomer,
+              icon: const Icon(Icons.cloud_upload),
+              label: Text(saveLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF001F3F),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 15),
+              ),
             ),
-          ),
+            // 기존 업체를 선택한 상태(수정 모드)일 때만 삭제 버튼 표시
+            if (isEditing) ...[
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: _deleteCustomer,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('삭제', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
@@ -253,7 +319,8 @@ class _CustomerScreenState extends State<CustomerScreen> {
                               ],
                             ),
                             const Divider(),
-                            _buildFormContent(true), // 모바일용 폼 렌더링
+                            // 🚀 신규 등록 폼: isNewMode: true → 삭제 버튼 미표시
+                            _buildFormContent(true, isNewMode: true),
                           ],
                         ),
                       ),
@@ -286,7 +353,8 @@ class _CustomerScreenState extends State<CustomerScreen> {
                           Container(
                             color: Colors.blue.shade50.withOpacity(0.3),
                             padding: const EdgeInsets.all(16),
-                            child: _buildFormContent(true), // 모바일용 폼 렌더링
+                            // 🚀 기존 업체 편집 폼: isNewMode: false (기본값) → 삭제 버튼 표시
+                            child: _buildFormContent(true),
                           )
                       ],
                     ),
@@ -342,7 +410,8 @@ class _CustomerScreenState extends State<CustomerScreen> {
               children: [
                 const Text('업체 상세 정보 (시트 등록/조회)', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
-                _buildFormContent(false), // PC용 폼 렌더링
+                // 🚀 PC: _selectedCustomer 유무에 따라 모드 자동 판별
+                _buildFormContent(false),
               ],
             ),
           ),

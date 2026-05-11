@@ -42,6 +42,9 @@ dependencies:
   gsheets: ^0.5.0
   pdf: ^3.12.0
   printing: ^5.14.3
+  excel: ^4.0.6
+  path_provider: ^2.1.5
+  share_plus: ^13.1.0
 
 dev_dependencies:
   flutter_test:
