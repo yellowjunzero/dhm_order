@@ -760,15 +760,13 @@ class _ExcelGridForm extends ConsumerStatefulWidget {
 class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
   late PlutoGridStateManager _gridManager;
 
-  // 그리드에 공통으로 적용되는 헤더 설정값 (드롭다운)
+ // 그리드에 공통으로 적용되는 헤더 설정값
   late String _entity;
   late String _salesCategory;
   late String _shippingSource;
   late String _deliveryMethod;
-  late String _closingMonth;
   late String _dueDate;
-  late TextEditingController _remarksCtrl;
-  late TextEditingController _internalCtrl;
+  late TextEditingController _deliveryPointCtrl; // 🚀 입고처 컨트롤러 추가
 
   @override
   void initState() {
@@ -778,17 +776,15 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
     _salesCategory = b.salesCategory;
     _shippingSource = b.shippingSource;
     _deliveryMethod = b.deliveryMethod;
-    _closingMonth = b.closingMonth;
-    _dueDate =
-        b.dueDate != null ? DateFormat('yyyy-MM-dd').format(b.dueDate!) : '';
-    _remarksCtrl = TextEditingController(text: b.remarks);
-    _internalCtrl = TextEditingController(text: b.internalNotes);
+    _dueDate = b.dueDate != null ? DateFormat('yyyy-MM-dd').format(b.dueDate!) : '';
+    
+    // 🚀 입고처 초기화
+    _deliveryPointCtrl = TextEditingController(text: b.deliveryPoint);
   }
 
   @override
   void dispose() {
-    _remarksCtrl.dispose();
-    _internalCtrl.dispose();
+    _deliveryPointCtrl.dispose(); // 🚀 입고처 해제
     super.dispose();
   }
 
@@ -812,7 +808,7 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
         PlutoColumn(title: '톱날L', field: 'sawL', type: PlutoColumnType.number(format: '#,###.###'), width: 70, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.orange.shade50),
         PlutoColumn(title: '단가', field: 'unitPrice', type: PlutoColumnType.number(format: '#,###'), width: 100, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.green.shade50),
         PlutoColumn(title: '단위', field: 'unit', type: PlutoColumnType.select(DeliveryOptions.units), width: 70),
-        PlutoColumn(title: '납기', field: 'deliveryDate', type: PlutoColumnType.date(format: 'yyyy-MM-dd'), width: 150),
+        PlutoColumn(title: '납기', field: 'deliveryDate', type: PlutoColumnType.date(format: 'yyyy-MM-dd'), width: 0),
         PlutoColumn(title: '마감월', field: 'closingMonth', type: PlutoColumnType.select(DeliveryOptions.closingMonths), width: 70),
         PlutoColumn(title: '비고', field: 'remark', type: PlutoColumnType.text(), width: 200),
         PlutoColumn(title: '주의/특기사항', field: 'internalNote', type: PlutoColumnType.text(), width: 200),
@@ -971,19 +967,18 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
 
         final state = OrderItemFormState(
           customer:        widget.baseState.customer,
-          // 🚀 그리드에서 뺀 값들은 상단 고정값(baseState)에서 가져옴
-          businessEntity:  widget.baseState.businessEntity,
-          salesCategory:   widget.baseState.salesCategory,
-          shippingSource:  widget.baseState.shippingSource,
-          deliveryMethod:  widget.baseState.deliveryMethod,
-          deliveryDestInfo: widget.baseState.deliveryDestInfo,
-          // 🚀 그리드에 남아있는 값들
-          origin:          getS('origin'),
-          material:        getS('material'),
-          productType:     getS('productType'),
+          businessEntity:  _entity,
+          salesCategory:   _salesCategory,
+          shippingSource:  _shippingSource,
+          deliveryMethod:  _deliveryMethod,
+          deliveryPoint:   _deliveryPointCtrl.text, // 🚀 입고처는 상단 공통값에서!
+          deliveryDestInfo: '',
+          
+          origin:          origin,
+          material:        material,
+          productType:     productType,
           productCategory: getS('productCategory'),
-          temper:          getS('temper'),
-          deliveryPoint:   widget.baseState.deliveryPoint, // 입고처도 고정값 사용
+          temper:          temper,
           precision:       getD('precision').toInt(),
           dueDate:         dueDateTime,
           thickness:       thickness,
@@ -999,7 +994,7 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
           costPrice:       matched.costPrice,
           remarks:         getS('remark'),
           internalNotes:   getS('internalNote'),
-          closingMonth:    rawMonth.isEmpty ? '당월' : rawMonth,
+          closingMonth:    rawMonth, // 🚀 위에서 계산한 마감월 변수 그대로 사용!
         );
 
         ref.read(orderProvider.notifier).addItem(state);
@@ -1023,15 +1018,12 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
           salesCategory: _salesCategory,
           shippingSource:_shippingSource,
           deliveryMethod:_deliveryMethod,
-          closingMonth:  _closingMonth,
           dueDate:       _dueDate,
-          remarksCtrl:   _remarksCtrl,
-          internalCtrl:  _internalCtrl,
+          deliveryPointCtrl: _deliveryPointCtrl, // 🚀 입고처 추가
           onEntityChanged:         (v) => setState(() => _entity = v),
           onSalesCategoryChanged:  (v) => setState(() => _salesCategory = v),
           onShippingSourceChanged: (v) => setState(() => _shippingSource = v),
           onDeliveryMethodChanged: (v) => setState(() => _deliveryMethod = v),
-          onClosingMonthChanged:   (v) => setState(() => _closingMonth = v),
           onDueDateChanged:        (v) => setState(() => _dueDate = v),
         ),
 
@@ -1106,31 +1098,27 @@ class _HeaderPanel extends StatefulWidget {
   final String salesCategory;
   final String shippingSource;
   final String deliveryMethod;
-  final String closingMonth;
   final String dueDate;
-  final TextEditingController remarksCtrl;
-  final TextEditingController internalCtrl;
+  final TextEditingController deliveryPointCtrl; // 🚀 입고처 추가
+  
   final ValueChanged<String> onEntityChanged;
   final ValueChanged<String> onSalesCategoryChanged;
   final ValueChanged<String> onShippingSourceChanged;
   final ValueChanged<String> onDeliveryMethodChanged;
-  final ValueChanged<String> onClosingMonthChanged;
   final ValueChanged<String> onDueDateChanged;
 
   const _HeaderPanel({
+    super.key,
     required this.entity,
     required this.salesCategory,
     required this.shippingSource,
     required this.deliveryMethod,
-    required this.closingMonth,
     required this.dueDate,
-    required this.remarksCtrl,
-    required this.internalCtrl,
+    required this.deliveryPointCtrl, // 🚀 입고처 추가
     required this.onEntityChanged,
     required this.onSalesCategoryChanged,
     required this.onShippingSourceChanged,
     required this.onDeliveryMethodChanged,
-    required this.onClosingMonthChanged,
     required this.onDueDateChanged,
   });
 
@@ -1181,23 +1169,24 @@ class _HeaderPanelState extends State<_HeaderPanel> {
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
               child: Column(
                 children: [
-                  // 1행: 사업자 / 매출구분 / 출고처 / 납품방법
+                  // 1행: 사업자 / 매출구분 / 출고처 / 입고처 / 납품방법 / 납기일
                   Row(
                     children: [
-                      _hpDrop('사업자', DeliveryOptions.entities, widget.entity,
-                          widget.onEntityChanged),
+                      _hpDrop('사업자', DeliveryOptions.entities, widget.entity, widget.onEntityChanged),
                       const SizedBox(width: 8),
-                      _hpDrop('매출구분', DeliveryOptions.salesCategories,
-                          widget.salesCategory, widget.onSalesCategoryChanged),
+                      _hpDrop('매출구분', DeliveryOptions.salesCategories, widget.salesCategory, widget.onSalesCategoryChanged),
                       const SizedBox(width: 8),
-                      _hpDrop('출고처', DeliveryOptions.branches,
-                          widget.shippingSource, widget.onShippingSourceChanged),
+                      _hpDrop('출고처', DeliveryOptions.branches, widget.shippingSource, widget.onShippingSourceChanged),
                       const SizedBox(width: 8),
-                      _hpDrop('납품방법', DeliveryOptions.methods,
-                          widget.deliveryMethod, widget.onDeliveryMethodChanged),
+                      // 🚀 출고처 옆에 입고처 추가
+                      Expanded(
+                        child: TextField(
+                          controller: widget.deliveryPointCtrl,
+                          decoration: const InputDecoration(labelText: '입고처 (공통)', border: OutlineInputBorder(), isDense: true),
+                        ),
+                      ),
                       const SizedBox(width: 8),
-                      _hpDrop('마감월', DeliveryOptions.closingMonths,
-                          widget.closingMonth, widget.onClosingMonthChanged),
+                      _hpDrop('납품방법', DeliveryOptions.methods, widget.deliveryMethod, widget.onDeliveryMethodChanged),
                       const SizedBox(width: 8),
                       // 납기일
                       Expanded(
@@ -1209,8 +1198,7 @@ class _HeaderPanelState extends State<_HeaderPanel> {
                             border: OutlineInputBorder(),
                             isDense: true,
                           ),
-                          controller:
-                              TextEditingController(text: widget.dueDate),
+                          controller: TextEditingController(text: widget.dueDate),
                           onTap: () async {
                             final picked = await showDatePicker(
                               context: context,
@@ -1219,35 +1207,9 @@ class _HeaderPanelState extends State<_HeaderPanel> {
                               lastDate: DateTime(2030),
                             );
                             if (picked != null) {
-                              widget.onDueDateChanged(
-                                  DateFormat('yyyy-MM-dd').format(picked));
+                              widget.onDueDateChanged(DateFormat('yyyy-MM-dd').format(picked));
                             }
                           },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // 2행: 비고 / 특기사항
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: widget.remarksCtrl,
-                          decoration: const InputDecoration(
-                              labelText: '비고 (공통)',
-                              border: OutlineInputBorder(),
-                              isDense: true),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextField(
-                          controller: widget.internalCtrl,
-                          decoration: const InputDecoration(
-                              labelText: '특기사항 (내부, 공통)',
-                              border: OutlineInputBorder(),
-                              isDense: true),
                         ),
                       ),
                     ],
