@@ -64,8 +64,9 @@ class Customer {
       email: g(15), emailTax: g(16), manager2: g(17), mobile2: g(18), memo: g(19),
       ceoName: g(20), bizStatus: g(21), bizType: g(22), regDate: g(23), bankAccount: g(24),
       homepage: g(25),
-      customerType: g(10).contains('대리점') ? '대리점' : '실수요자',
-      isAgency: g(10).contains('대리점'),
+      // 🚀 D열(인덱스 3)의 값을 확인하여 대리점/실수요자 판단
+      customerType: g(3).contains('대리점') ? '대리점' : '실수요자',
+      isAgency: g(3).contains('대리점'),
       rawData: list,
     );
   }
