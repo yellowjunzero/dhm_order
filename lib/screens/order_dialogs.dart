@@ -271,16 +271,54 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       return _row('마진율', '원가표 미등록', valueColor: Colors.grey);
     }
 
+    
     final cost = matched.costPrice;
     final rate = marginRate ?? 0;
-    Color rateColor;
-    String rateLabel;
-    if (rate >= 20) {
-      rateColor = Colors.green.shade700; rateLabel = '양호';
-    } else if (rate >= 10) {
-      rateColor = Colors.orange.shade700; rateLabel = '주의';
-    } else {
-      rateColor = Colors.red.shade700; rateLabel = '위험';
+    
+    // 🚀 여기서부터 엑셀 수식 기반 마진율 평가 시작
+    String rateLabel = '확인';
+    Color rateColor = Colors.grey;
+
+    // 백분율(예: 15.0)을 소수점(0.15)으로 변환
+    final marginDec = rate / 100; 
+    
+    // 현재 다이얼로그에 전달된 위젯의 order 객체에서 직접 꺼내옵니다.
+    final category = widget.order.productCategory; 
+    
+    // 💡 OrderSummary에 isAgency 정보가 없다면, 일단 안전하게 업체명으로 판단합니다.
+    final isAgency = widget.order.company.contains('대리점'); 
+
+    final isProcessed = {'절단', '4면', '2면'}.contains(category);
+    final isRaw = category == '원장';
+
+    if (isAgency) {
+      if (isProcessed) {
+        if (marginDec < 0.15) { rateLabel = '손실'; rateColor = Colors.red; }
+        else if (marginDec < 0.20) { rateLabel = '매우낮음'; rateColor = Colors.orange; }
+        else if (marginDec < 0.25) { rateLabel = '낮음'; rateColor = Colors.amber; }
+        else if (marginDec < 0.30) { rateLabel = '적정'; rateColor = Colors.green; }
+        else { rateLabel = '높음'; rateColor = Colors.blue; }
+      } else if (isRaw) {
+        if (marginDec <= 0.08) { rateLabel = '손실'; rateColor = Colors.red; }
+        else if (marginDec < 0.12) { rateLabel = '매우낮음'; rateColor = Colors.orange; }
+        else if (marginDec < 0.15) { rateLabel = '낮음'; rateColor = Colors.amber; }
+        else if (marginDec < 0.20) { rateLabel = '적정'; rateColor = Colors.green; }
+        else { rateLabel = '높음'; rateColor = Colors.blue; }
+      }
+    } else { // 실수요자
+      if (isProcessed) {
+        if (marginDec < 0.15) { rateLabel = '손실'; rateColor = Colors.red; }
+        else if (marginDec < 0.22) { rateLabel = '매우낮음'; rateColor = Colors.orange; }
+        else if (marginDec < 0.28) { rateLabel = '낮음'; rateColor = Colors.amber; }
+        else if (marginDec < 0.35) { rateLabel = '적정'; rateColor = Colors.green; }
+        else { rateLabel = '높음'; rateColor = Colors.blue; }
+      } else if (isRaw) {
+        if (marginDec <= 0.08) { rateLabel = '손실'; rateColor = Colors.red; }
+        else if (marginDec < 0.12) { rateLabel = '매우낮음'; rateColor = Colors.orange; }
+        else if (marginDec < 0.18) { rateLabel = '낮음'; rateColor = Colors.amber; }
+        else if (marginDec < 0.25) { rateLabel = '적정'; rateColor = Colors.green; }
+        else { rateLabel = '높음'; rateColor = Colors.blue; }
+      }
     }
 
     return Padding(

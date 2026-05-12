@@ -269,16 +269,27 @@ class OrderItemFormNotifier extends StateNotifier<OrderItemFormState> {
     _recalcMargin();
   }
 
-  // ── 마진율 재계산 ───────────────────────────────────────────
+  // ── 마진율 재계산 (엑셀 수식 완벽 이식본) ───────────────────────────────────
   void _recalcMargin() {
-    if (state.unitPrice <= 0 || state.costPrice <= 0) return;
+    // 1. 단가/원가가 없거나, 제품구분이 선택되지 않았으면 마진율 숨김 (엑셀 IF(AD20="",""...) 역할)
+    if (state.unitPrice <= 0 || state.costPrice <= 0 || state.productCategory == null || state.productCategory!.isEmpty) {
+      state = state.copyWith(marginFeedback: null); // ⚠️ 여기서 에러나면 state = state.copyWith(clearMarginFeedback: true); 로 변경
+      return;
+    }
+
     final margin = (state.unitPrice - state.costPrice) / state.unitPrice;
-    final isAgency = state.customer?.isAgency ?? true;
+    
+    // 2. 고객 판별 (기본적으로 실수요자로 보수적 판단)
+    final isAgency = state.customer?.isAgency ?? false;
+
+    // 3. 제품 구분 명확히 판별 (OR 로직)
     final isProcessed = {'절단', '4면', '2면'}.contains(state.productCategory);
+    final isRaw = state.productCategory == '원장';
 
     String label = '';
     Color color = Colors.black;
 
+    // 4. 엑셀 IFS 로직 100% 이식
     if (isAgency) {
       if (isProcessed) {
         if (margin < 0.15) { label = '❌손실'; color = Colors.red; }
@@ -286,30 +297,36 @@ class OrderItemFormNotifier extends StateNotifier<OrderItemFormState> {
         else if (margin < 0.25) { label = '🟡낮음'; color = Colors.amber; }
         else if (margin < 0.30) { label = '✅적정'; color = Colors.green; }
         else { label = '🔥높음'; color = Colors.blue; }
-      } else {
+      } else if (isRaw) {
         if (margin <= 0.08) { label = '❌손실'; color = Colors.red; }
         else if (margin < 0.12) { label = '⚠️매우낮음'; color = Colors.orange; }
         else if (margin < 0.15) { label = '🟡낮음'; color = Colors.amber; }
         else if (margin < 0.20) { label = '✅적정'; color = Colors.green; }
         else { label = '🔥높음'; color = Colors.blue; }
+      } else {
+        label = '⚠️확인'; color = Colors.grey; // 원장도 가공도 아닐 때
       }
-    } else {
+    } else { // 실수요자
       if (isProcessed) {
         if (margin < 0.15) { label = '❌손실'; color = Colors.red; }
         else if (margin < 0.22) { label = '⚠️매우낮음'; color = Colors.orange; }
         else if (margin < 0.28) { label = '🟡낮음'; color = Colors.amber; }
         else if (margin < 0.35) { label = '✅적정'; color = Colors.green; }
         else { label = '🔥높음'; color = Colors.blue; }
-      } else {
+      } else if (isRaw) {
         if (margin <= 0.08) { label = '❌손실'; color = Colors.red; }
         else if (margin < 0.12) { label = '⚠️매우낮음'; color = Colors.orange; }
         else if (margin < 0.18) { label = '🟡낮음'; color = Colors.amber; }
         else if (margin < 0.25) { label = '✅적정'; color = Colors.green; }
         else { label = '🔥높음'; color = Colors.blue; }
+      } else {
+        label = '⚠️확인'; color = Colors.grey; // 원장도 가공도 아닐 때
       }
     }
+
     state = state.copyWith(
-        marginFeedback: MarginFeedback(currentRate: margin, levelLabel: label, levelColor: color));
+      marginFeedback: MarginFeedback(currentRate: margin, levelLabel: label, levelColor: color)
+    );
   }
 
   /// 그리드 모드에서 여러 행을 한 번에 장바구니에 추가할 때 사용
