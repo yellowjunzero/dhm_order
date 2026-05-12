@@ -17,15 +17,17 @@ import '../providers/order_provider.dart';
 // ════════════════════════════════════════════════════════════════
 
 class DeliveryOptions {
-  static const methods = ['경동선택', '경동선화', '경동후화', '경동후택', '경동선불출고택배', '합화', '납품', '자가'];
-  static const units = ['KG', 'EA'];
-  static const materials = ['A5052', 'A5083', 'A6061', 'A7075'];
-  static const productTypes = ['KPL', 'TPL', 'PL', 'SB', 'SLAB', 'SCP', 'RB', 'SH', 'CO', 'CP', 'AG', 'PP', 'SP', 'SHAPE', 'HX', 'FLANGE'];
-  static const productCategories = ['원장', '절단', '4면', '2면'];
-  static const salesCategories = ['일매', '직매', '반매', '보매', '선보매', '반보매', '선매출', '수출', '구매', '직구매', '반구매', '이동', '단정', '중정', '임가공'];
-  static const entities = ['DHM', 'DHT'];
-  static const branches = ['DHM반월', 'DHM문경', 'DHM원시창고', 'DHT부산', 'DHT대구'];
-  static const closingMonths = ['당월', '익월', '1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+  static const methods = ['', '경동선택', '경동선화', '경동후화', '경동후택', '경동선불출고택배', '합화', '납품', '자가'];
+  static const units = ['', 'KG', 'EA'];
+  static const materials = ['', 'A5052', 'A5083', 'A6061', 'A7075'];
+  static const productTypes = ['', 'KPL', 'TPL', 'PL', 'SB', 'SLAB', 'SCP', 'RB', 'SH', 'CO', 'CP', 'AG', 'PP', 'SP', 'SHAPE', 'HX', 'FLANGE'];
+  static const productCategories = ['', '원장', '절단', '4면', '2면'];
+  static const salesCategories = ['', '일매', '직매', '반매', '보매', '선보매', '반보매', '선매출', '수출', '구매', '직구매', '반구매', '이동', '단정', '중정', '임가공'];
+  static const entities = ['', 'DHM', 'DHT'];
+  static const branches = ['', 'DHM반월', 'DHM문경', 'DHM원시창고', 'DHT부산', 'DHT대구'];
+  static const origins = ['', '국산', '일본', '중국', '유럽', '대만', '러시아', '미국', '기타'];
+  static const tempers = ['', 'F', 'H112', 'T6', 'H32', 'T651'];
+  static const closingMonths = ['', '당월', '익월', '1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -792,165 +794,92 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
 
   // ── PlutoGrid 컬럼 정의 ─────────────────────────────────────
 
+  // 🚀 1. 컬럼 리스트 수정 (고정값 7개 삭제, 20개로 축소)
   List<PlutoColumn> get _columns => [
-        // 오리진
-        PlutoColumn(
-          title: 'ORIGIN',
-          field: 'origin',
-          type: PlutoColumnType.text(),
-          width: 90,
-        ),
-        // 제품구분
-        PlutoColumn(
-          title: '제품\n구분',
-          field: 'productCategory',
-          type: PlutoColumnType.select(DeliveryOptions.productCategories),
-          width: 80,
-        ),
-        // 재질
-        PlutoColumn(
-          title: '재질',
-          field: 'material',
-          type: PlutoColumnType.select(DeliveryOptions.materials),
-          width: 90,
-        ),
-        // 제품형태
-        PlutoColumn(
-          title: '제품\n형태',
-          field: 'productType',
-          type: PlutoColumnType.select(DeliveryOptions.productTypes),
-          width: 90,
-        ),
-        // 조질
-        PlutoColumn(
-          title: '조질',
-          field: 'temper',
-          type: PlutoColumnType.text(),
-          width: 70,
-        ),
-        // T
-        PlutoColumn(
-          title: 'T',
-          field: 'thickness',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 70,
-          textAlign: PlutoColumnTextAlign.right,
-        ),
-        // B
-        PlutoColumn(
-          title: 'B',
-          field: 'bDimension',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 70,
-          textAlign: PlutoColumnTextAlign.right,
-        ),
-        // W
-        PlutoColumn(
-          title: 'W',
-          field: 'width',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 70,
-          textAlign: PlutoColumnTextAlign.right,
-        ),
-        // L
-        PlutoColumn(
-          title: 'L',
-          field: 'length',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 70,
-          textAlign: PlutoColumnTextAlign.right,
-        ),
-        // 수량
-        PlutoColumn(
-          title: '수량',
-          field: 'qty',
-          type: PlutoColumnType.number(negative: false, format: '#,###'),
-          width: 70,
-          textAlign: PlutoColumnTextAlign.right,
-          backgroundColor: Colors.blue.shade50,
-        ),
-        // 단위
-        PlutoColumn(
-          title: '단위',
-          field: 'unit',
-          type: PlutoColumnType.select(DeliveryOptions.units),
-          width: 65,
-        ),
-        // 단가
-        PlutoColumn(
-          title: '단가',
-          field: 'unitPrice',
-          type: PlutoColumnType.number(negative: false, format: '#,###'),
-          width: 90,
-          textAlign: PlutoColumnTextAlign.right,
-          backgroundColor: Colors.green.shade50,
-        ),
-        // 톱날T
-        PlutoColumn(
-          title: '톱T',
-          field: 'sawT',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 65,
-          textAlign: PlutoColumnTextAlign.right,
-          backgroundColor: Colors.orange.shade50,
-        ),
-        // 톱날W
-        PlutoColumn(
-          title: '톱W',
-          field: 'sawW',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 65,
-          textAlign: PlutoColumnTextAlign.right,
-          backgroundColor: Colors.orange.shade50,
-        ),
-        // 톱날L
-        PlutoColumn(
-          title: '톱L',
-          field: 'sawL',
-          type: PlutoColumnType.number(negative: false, format: '#,###.###'),
-          width: 65,
-          textAlign: PlutoColumnTextAlign.right,
-          backgroundColor: Colors.orange.shade50,
-        ),
-        // 입고처
-        PlutoColumn(
-          title: '입고처',
-          field: 'deliveryPoint',
-          type: PlutoColumnType.text(),
-          width: 110,
-        ),
-        // 비고 (행별)
-        PlutoColumn(
-          title: '비고',
-          field: 'remark',
-          type: PlutoColumnType.text(),
-          width: 130,
-        ),
+        PlutoColumn(title: '소수점', field: 'precision', type: PlutoColumnType.number(), width: 35),
+        PlutoColumn(title: 'ORIGIN', field: 'origin', type: PlutoColumnType.text(), width: 90),
+        PlutoColumn(title: '제품구분', field: 'productCategory', type: PlutoColumnType.select(DeliveryOptions.productCategories), width: 90),
+        PlutoColumn(title: '재질', field: 'material', type: PlutoColumnType.select(DeliveryOptions.materials), width: 90),
+        PlutoColumn(title: '제품형태', field: 'productType', type: PlutoColumnType.select(DeliveryOptions.productTypes), width: 90),
+        PlutoColumn(title: '조질', field: 'temper', type: PlutoColumnType.text(), width: 80),
+        PlutoColumn(title: '두께(T)', field: 'thickness', type: PlutoColumnType.number(format: '#,###.###'), width: 80, textAlign: PlutoColumnTextAlign.right),
+        PlutoColumn(title: 'B', field: 'bDimension', type: PlutoColumnType.number(format: '#,###.###'), width: 70, textAlign: PlutoColumnTextAlign.right),
+        PlutoColumn(title: '폭(W)', field: 'width', type: PlutoColumnType.number(format: '#,###.###'), width: 80, textAlign: PlutoColumnTextAlign.right),
+        PlutoColumn(title: '길이(L)', field: 'length', type: PlutoColumnType.number(format: '#,###.###'), width: 80, textAlign: PlutoColumnTextAlign.right),
+        PlutoColumn(title: '수량', field: 'qty', type: PlutoColumnType.number(), width: 70, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.blue.shade50),
+        PlutoColumn(title: '톱날T', field: 'sawT', type: PlutoColumnType.number(format: '#,###.###'), width: 70, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.orange.shade50),
+        PlutoColumn(title: '톱날W', field: 'sawW', type: PlutoColumnType.number(format: '#,###.###'), width: 70, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.orange.shade50),
+        PlutoColumn(title: '톱날L', field: 'sawL', type: PlutoColumnType.number(format: '#,###.###'), width: 70, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.orange.shade50),
+        PlutoColumn(title: '단가', field: 'unitPrice', type: PlutoColumnType.number(format: '#,###'), width: 100, textAlign: PlutoColumnTextAlign.right, backgroundColor: Colors.green.shade50),
+        PlutoColumn(title: '단위', field: 'unit', type: PlutoColumnType.select(DeliveryOptions.units), width: 70),
+        PlutoColumn(title: '납기', field: 'deliveryDate', type: PlutoColumnType.date(format: 'yyyy-MM-dd'), width: 150),
+        PlutoColumn(title: '마감월', field: 'closingMonth', type: PlutoColumnType.select(DeliveryOptions.closingMonths), width: 70),
+        PlutoColumn(title: '비고', field: 'remark', type: PlutoColumnType.text(), width: 200),
+        PlutoColumn(title: '주의/특기사항', field: 'internalNote', type: PlutoColumnType.text(), width: 200),
       ];
 
-  // ── 빈 행 1개 생성 ──────────────────────────────────────────
+  // 🚀 2. 초기값 완전 공란 처리 (0 -> null)
   PlutoRow _emptyRow() {
     return PlutoRow(cells: {
+      'precision':       PlutoCell(value: null),
       'origin':          PlutoCell(value: ''),
-      'productCategory': PlutoCell(value: DeliveryOptions.productCategories.first),
-      'material':        PlutoCell(value: DeliveryOptions.materials.first),
-      'productType':     PlutoCell(value: DeliveryOptions.productTypes.first),
+      'productCategory': PlutoCell(value: ''),
+      'material':        PlutoCell(value: ''),
+      'productType':     PlutoCell(value: ''),
       'temper':          PlutoCell(value: ''),
-      'thickness':       PlutoCell(value: 0),
-      'bDimension':      PlutoCell(value: 0),
-      'width':           PlutoCell(value: 0),
-      'length':          PlutoCell(value: 0),
-      'qty':             PlutoCell(value: 1),
-      'unit':            PlutoCell(value: 'KG'),
-      'unitPrice':       PlutoCell(value: 0),
-      'sawT':            PlutoCell(value: 0),
-      'sawW':            PlutoCell(value: 0),
-      'sawL':            PlutoCell(value: 0),
-      'deliveryPoint':   PlutoCell(value: widget.companyName),
+      'thickness':       PlutoCell(value: null),
+      'bDimension':      PlutoCell(value: null),
+      'width':           PlutoCell(value: null),
+      'length':          PlutoCell(value: null),
+      'qty':             PlutoCell(value: null),
+      'sawT':            PlutoCell(value: null),
+      'sawW':            PlutoCell(value: null),
+      'sawL':            PlutoCell(value: null),
+      'unitPrice':       PlutoCell(value: null),
+      'unit':            PlutoCell(value: 'kg'),
+      'deliveryDate':    PlutoCell(value: ''),
+      'closingMonth':    PlutoCell(value: '당월'),
       'remark':          PlutoCell(value: ''),
+      'internalNote':    PlutoCell(value: ''),
     });
   }
+// ── 🚀 Ctrl + D 윗줄 복사 로직 (에러 원천 차단본) ────────────────────────────
+  void _handleDuplicateAbove() {
+    // 1. 현재 커서 위치가 아예 없으면 중단
+    if (_gridManager.currentCellPosition == null) return;
+    
+    // 2. 여러 셀을 드래그해서 선택한 경우 (가로/세로 다중 복사)
+    if (_gridManager.currentSelectingPosition != null) {
+      // 드래그한 가로(열) 범위 계산
+      int startCol = _gridManager.currentCellPosition!.columnIdx!;
+      int endCol = _gridManager.currentSelectingPosition!.columnIdx!;
+      if (startCol > endCol) { int temp = startCol; startCol = endCol; endCol = temp; }
 
+      // 드래그한 세로(행) 범위 계산
+      int startRow = _gridManager.currentCellPosition!.rowIdx!;
+      int endRow = _gridManager.currentSelectingPosition!.rowIdx!;
+      if (startRow > endRow) { int temp = startRow; startRow = endRow; endRow = temp; }
+
+      // 선택된 모든 칸을 순회하면서 윗줄 값을 복사
+      for (int r = startRow; r <= endRow; r++) {
+        if (r == 0) continue; // 첫 번째 행은 윗줄이 없으므로 패스
+        for (int c = startCol; c <= endCol; c++) {
+          final field = _gridManager.columns[c].field;
+          final aboveValue = _gridManager.rows[r - 1].cells[field]!.value;
+          _gridManager.changeCellValue(_gridManager.rows[r].cells[field]!, aboveValue);
+        }
+      }
+    } 
+    // 3. 드래그 없이 한 칸만 클릭한 경우 (단일 복사)
+    else {
+      final int rowIdx = _gridManager.currentCellPosition!.rowIdx!;
+      if (rowIdx > 0 && _gridManager.currentColumn != null) {
+        final field = _gridManager.currentColumn!.field;
+        final aboveValue = _gridManager.rows[rowIdx - 1].cells[field]!.value;
+        _gridManager.changeCellValue(_gridManager.currentCell!, aboveValue);
+      }
+    }
+  }
   // ── 행이 유효한지 판별 (필수값 최소 1개 이상) ────────────────
   bool _isRowValid(PlutoRow row) {
     final t = _cellDouble(row, 'thickness');
@@ -995,72 +924,93 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
   }
 
   // ── 그리드 → OrderItemFormState 변환 후 장바구니에 추가 ─────
-  void _addToCart(BuildContext context) {
-    final validRows = _gridManager.rows.where(_isRowValid).toList();
-    if (validRows.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ 유효한 행이 없습니다. 두께/폭과 수량을 확인해주세요.')),
-      );
-      return;
+  Future<void> _addToCart(BuildContext context) async {
+    int addedCount = 0;
+    final costTable = await GSheetService().fetchCostTable();
+
+    for (var row in _gridManager.rows) { 
+      double getD(String field) {
+        final v = row.cells[field]?.value;
+        if (v is double) return v;
+        if (v is int) return v.toDouble();
+        return double.tryParse(v?.toString() ?? '') ?? 0.0;
+      }
+      String getS(String field) => row.cells[field]?.value?.toString() ?? '';
+
+      final thickness = getD('thickness');
+      final width = getD('width');
+      final qty = getD('qty');
+
+      if ((thickness > 0 || width > 0) && qty > 0) {
+        final origin = getS('origin');
+        final material = getS('material');
+        final productType = getS('productType');
+        final temper = getS('temper');
+
+        String norm(String s) => s.toLowerCase().replaceAll(' ', '');
+        final matched = costTable.firstWhere(
+          (c) => norm(c.origin) == norm(origin) && 
+                 norm(c.material) == norm(material) && 
+                 norm(c.productType) == norm(productType) && 
+                 norm(c.temper) == norm(temper),
+          orElse: () => CostTableItem(origin: '', material: '', productType: '', temper: '', costPrice: 0, remarks: ''),
+        );
+
+        String rawMonth = getS('closingMonth');
+        if (rawMonth == '당월') rawMonth = '${DateTime.now().month}월';
+        else if (rawMonth == '익월') {
+          final next = DateTime.now().month + 1;
+          rawMonth = '${next > 12 ? 1 : next}월';
+        }
+
+        DateTime? dueDateTime;
+        try {
+          final dDate = getS('deliveryDate');
+          if (dDate.isNotEmpty) dueDateTime = DateTime.parse(dDate);
+        } catch (_) {}
+
+        final state = OrderItemFormState(
+          customer:        widget.baseState.customer,
+          // 🚀 그리드에서 뺀 값들은 상단 고정값(baseState)에서 가져옴
+          businessEntity:  widget.baseState.businessEntity,
+          salesCategory:   widget.baseState.salesCategory,
+          shippingSource:  widget.baseState.shippingSource,
+          deliveryMethod:  widget.baseState.deliveryMethod,
+          deliveryDestInfo: widget.baseState.deliveryDestInfo,
+          // 🚀 그리드에 남아있는 값들
+          origin:          getS('origin'),
+          material:        getS('material'),
+          productType:     getS('productType'),
+          productCategory: getS('productCategory'),
+          temper:          getS('temper'),
+          deliveryPoint:   widget.baseState.deliveryPoint, // 입고처도 고정값 사용
+          precision:       getD('precision').toInt(),
+          dueDate:         dueDateTime,
+          thickness:       thickness,
+          bDimension:      getD('bDimension'),
+          width:           width,
+          length:          getD('length'),
+          qty:             qty,
+          sawT:            getD('sawT'),
+          sawW:            getD('sawW'),
+          sawL:            getD('sawL'),
+          unit:            getS('unit').isEmpty ? 'KG' : getS('unit'),
+          unitPrice:       getD('unitPrice'),
+          costPrice:       matched.costPrice,
+          remarks:         getS('remark'),
+          internalNotes:   getS('internalNote'),
+          closingMonth:    rawMonth.isEmpty ? '당월' : rawMonth,
+        );
+
+        ref.read(orderProvider.notifier).addItem(state);
+        addedCount++;
+      }
     }
 
-    final resolvedMonth = _resolveClosingMonth(_closingMonth);
-    DateTime? dueDateTime;
-    try {
-      if (_dueDate.isNotEmpty) dueDateTime = DateTime.parse(_dueDate);
-    } catch (_) {}
-
-    for (final row in validRows) {
-      final origin      = _cellStr(row, 'origin');
-      final material    = _cellStr(row, 'material');
-      final productType = _cellStr(row, 'productType');
-      final temper      = _cellStr(row, 'temper');
-      final unitPrice   = _cellDouble(row, 'unitPrice');
-      final costPrice   = _lookupCost(origin, material, productType, temper);
-
-      final item = OrderItemFormState(
-        customer:        widget.baseState.customer,
-        businessEntity:  _entity,
-        salesCategory:   _salesCategory,
-        origin:          origin,
-        material:        material,
-        productType:     productType,
-        productCategory: _cellStr(row, 'productCategory'),
-        temper:          temper,
-        shippingSource:  _shippingSource,
-        deliveryPoint:   _cellStr(row, 'deliveryPoint'),
-        deliveryMethod:  _deliveryMethod,
-        deliveryDestInfo: '',
-        precision:       widget.baseState.precision,
-        dueDate:         dueDateTime,
-        thickness:       _cellDouble(row, 'thickness'),
-        bDimension:      _cellDouble(row, 'bDimension'),
-        width:           _cellDouble(row, 'width'),
-        length:          _cellDouble(row, 'length'),
-        qty:             _cellDouble(row, 'qty'),
-        sawT:            _cellDouble(row, 'sawT'),
-        sawW:            _cellDouble(row, 'sawW'),
-        sawL:            _cellDouble(row, 'sawL'),
-        unit:            _cellStr(row, 'unit'),
-        unitPrice:       unitPrice,
-        costPrice:       costPrice,
-        remarks:         _cellStr(row, 'remark').isNotEmpty
-                            ? _cellStr(row, 'remark')
-                            : _remarksCtrl.text,
-        internalNotes:   _internalCtrl.text,
-        closingMonth:    resolvedMonth,
-      );
-
-      ref.read(orderProvider.notifier).addItem(item);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✅ 유효한 데이터 $addedCount건이 장바구니에 담겼습니다.'), backgroundColor: Colors.green));
+      if (addedCount > 0) Navigator.pop(context);
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✅ ${validRows.length}개 품목이 장바구니에 추가되었습니다.'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    Navigator.pop(context);
   }
 
   @override
@@ -1096,6 +1046,8 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
               _gridManager.setSelectingMode(PlutoGridSelectingMode.cell);
             },
             configuration: PlutoGridConfiguration(
+              // 🚀 엔터키를 치면 편집을 마치고 아래 칸으로 이동하도록 설정
+              enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,                        
               style: PlutoGridStyleConfig(
                 gridBorderColor: Colors.grey.shade300,
                 cellColorInEditState: Colors.yellow.shade50,
@@ -1109,6 +1061,7 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
               ),
               shortcut: PlutoGridShortcut(
                 actions: {
+                  ...PlutoGridShortcut.defaultActions,
                   // Ctrl+C : 복사 (PlutoGrid 내장)
                   LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyC):
                       const PlutoGridActionCopyValues(),
@@ -1118,6 +1071,7 @@ class _ExcelGridFormState extends ConsumerState<_ExcelGridForm> {
                   // Ctrl+A : 전체 선택
                   LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyA):
                       const PlutoGridActionSelectAll(),
+                  LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyD): _CustomDuplicateAction(onExecute: _handleDuplicateAbove),    
                 },
               ),
             ),
@@ -1417,5 +1371,13 @@ class _GridBottomBar extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+class _CustomDuplicateAction extends PlutoGridShortcutAction {
+  final VoidCallback onExecute;
+  _CustomDuplicateAction({required this.onExecute});
+  @override
+  void execute({required PlutoKeyManagerEvent keyEvent, required PlutoGridStateManager stateManager}) {
+    onExecute();
   }
 }
